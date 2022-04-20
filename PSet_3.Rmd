@@ -1,0 +1,138 @@
+---
+title: "PSet2_R"
+author: "Hady Aly"
+date: "4/20/2022"
+output: pdf_document
+---
+
+## Problem 5
+
+```{r}
+
+df <- read.csv("ak91.csv")
+yrs_educ <- df$YRS_EDUC
+wkly_wage <- df$WKLY_WAGE
+
+```
+
+**a)**
+
+```{r}
+
+# Defining X:
+df$X <- 1*(yrs_educ==16)
+
+# Sample Analogue Estimator:
+Px <- mean(df$X)
+Px
+
+```
+
+**b)**
+
+```{r}
+
+mu_college <- mean(df$X*df$WKLY_WAGE)/Px
+mu_college
+
+```
+
+**c)**
+
+```{r}
+
+# Sample Analogue Estimator for Var(Y|X=1):
+var_college <- (mean(df$X*(df$WKLY_WAGE)^2)/Px)-(mean(df$X*df$WKLY_WAGE)/Px)^2
+
+
+se_college <- (1/sqrt(nrow(df)))*sqrt(var_college/Px)
+se_college
+
+```
+
+**d)**
+
+```{r}
+
+Cn <- c(mu_college-1.96*se_college, mu_college+1.96*se_college)
+Cn
+
+```
+
+**e)** Given that the confidence interval calculated at the 5% significance does not include 600, we do reject the null hypothesis that mu_college is equal to 600.
+
+This is saying that we found statistically significant evidence against the hypothesis that the average weekly wage of those with a college degree (exactly 16 years of education) is 600.
+
+**f)** We fail to reject the null hypothesis that mu_college is equal to 595 at a 5% significance level, given that value is included in the confidence interval.
+
+This is saying that we haven't found statistically significant evidence against the average weekly wage of those with a college degree being equal to 595, thereby won't reject the hypothesis.
+
+## Problem 6
+
+**a)**
+
+```{r}
+
+my_confint <- function(mu_hat, se, alpha) {
+z <- qnorm(1-(alpha/2))
+confint <- c(mu_hat-(z*se),mu_hat+(z*se))
+return(confint)
+}
+
+my_confint(mu_college , se_college , 0.01)
+
+```
+
+**b)**
+
+```{r}
+
+# Define a custom function that returns TRUE if mu_0 is not in confint
+my_testrejects <- function(confint,mu_0) {
+# Check whether mu_0 is in confint
+is_in_confint <- mu_0 >= confint[1] & mu_0<=confint[2]
+# If mu_0 is in confit, don’t reject. Else, reject.
+is_rejected <- !is_in_confint
+# Return boolean
+return(is_rejected)
+}
+
+# Check whether the test rejects on 1\% significance level
+confint_01 <- my_confint(mu_college , se_college , 0.01)
+my_testrejects (confint_01, 600) # [1] FALSE
+
+# Check whether the test rejects on 10\% significance level
+confint_10 <- my_confint (mu_college , se_college , 0.1)
+my_testrejects(confint_10, 600) # [1] TRUE
+
+```
+
+**c)**
+
+```{r}
+
+# Define a custom function for a two-sided test
+my_twosidedtest <- function(mu_hat, se, alpha, mu_0) {
+# Compute the confidence interval w/ significance level alpha
+confint <- my_confint(mu_hat, se, alpha)
+# Check whether mu_0 is in the confidence interval
+is_rejected <- my_testrejects(confint, mu_0)
+
+# Construct test message
+if(is_rejected) {
+  message <- paste("We reject the null hypothesis that mu equals",mu_0,"at a",alpha, "significance level")
+ } else {
+  message <- paste("We fail to reject the null hypothesis that mu equals",mu_0,"at a",alpha, "significance level")
+}
+# Print the message
+print(message)
+}
+
+# Check whether the test rejects on 1\% significance level
+my_twosidedtest(mu_college , se_college , 0.01 , 600) # Should not reject
+
+# Check whether the test rejects on 10\% significance level
+my_twosidedtest(mu_college , se_college , 0.10 , 600) # Should reject
+
+
+```
