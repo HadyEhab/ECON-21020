@@ -1,0 +1,192 @@
+---
+title: "PSet 3 Q6-Q7"
+author: "Hady Aly"
+date: "5/5/2022"
+output: pdf_document
+---
+
+```{r, include=FALSE}
+
+# Load the ak91.csv data
+df <- read.csv("ak91.csv")
+n <- nrow(df)
+
+# Store years of education and the weekly wage in separate variables
+yrs_educ <- df$YRS_EDUC
+wkly_wage <- df$WKLY_WAGE
+
+```
+
+## Problem 6
+
+**a)** 
+
+```{r}
+
+beta_est <- (mean(yrs_educ*wkly_wage) - mean(yrs_educ)*mean(wkly_wage))/(mean((yrs_educ)^2)-mean(yrs_educ)^2)
+
+alpha_est <- mean(wkly_wage) - mean(yrs_educ)*beta_est
+
+```
+
+
+**b)**
+
+```{r}
+
+beta_est
+alpha_est
+
+```
+
+In our example, beta is the estimate for the approximate expected change in weekly wage associated with a unit increase in the years of education, which is approximately $30
+
+**c)**  
+
+```{r}
+
+BLP_Y_X <- function(x) {alpha_est + beta_est*x}
+BLP_Y_X(16)
+
+```
+
+The answers are indeed different. The reason is that we were previously conditioning on a binary variable, thereby we estimated the exact expected weekly income of an individual with 16 years of education. However, this time we're working with BLB coefficients and the variable we're conditioning on is not binary, thereby the estimate we have is approximate (based on our estimate of the approximate expected change in weekly wage associated with a change in years of education, rather than the exact expected change)
+
+**d)** 
+
+```{r}
+
+# I start by constructing a vector containing each estimated error
+error_est <- wkly_wage - yrs_educ*beta_est - alpha_est
+
+# I then construct the numerator for the standard error
+se_numer <- sqrt(mean((error_est^2)*(yrs_educ-mean(yrs_educ))^2))
+
+# I then construct the estimated variance for the years of education, given that the var() function in r uses a difference variance estimator than the one we're working with.
+var_x <- mean(yrs_educ^2) - mean(yrs_educ)^2
+
+# Finally, I calculate the standard error
+se <- se_numer/(var_x*sqrt(n))
+
+```
+
+**e)**
+
+```{r}
+
+# The test statistic I use is a z-score
+z_score <- abs((beta_est - 31)/se)
+
+```
+
+**f)**  
+
+```{r}
+
+# I calculate the two-sided p-value
+p_value <- 2*pnorm(z_score, lower.tail = FALSE)
+
+```
+
+**g)**
+
+The test indeed rejects at a 1% significance level the null hypothesis that the approximate expected change in weekly wage associated with a unit increase in years of education is 31. 
+
+
+## Problem 7
+
+**a)**
+
+```{r}
+
+# Define a custom function to compute the ols estimates
+my_simplecoef <- function(y, x) {
+  # Compute and return estimates for alpha and beta
+  beta <- (mean(x*y)-mean(x)*mean(y))/(mean(x^2)-mean(x)^2)
+  alpha <- mean(y) - beta * mean(x)
+  c(alpha, beta)
+}
+
+# Test the function using your solution to Problem 6
+coef <- my_simplecoef(wkly_wage, yrs_educ)
+coef
+
+```
+
+**b)** 
+
+```{r}
+
+# Define a custom function to compute the blp estimates
+my_simpleblp <- function(coef, x) {
+  # Compute and return BLP estimates
+  coef[1] + coef[2]*x
+}
+
+# Test the function
+mean(wkly_wage) - mean(my_simpleblp(coef, yrs_educ)) # 0
+
+```
+
+**c)** 
+
+```{r}
+
+# Define a custom function to compute the standard error
+my_simplese <- function(coef, y, x) {
+  # Creating a vector of error terms
+  e <- y - my_simpleblp(coef,x)
+  # Creating the numerator term of the se
+  se_nu <- sqrt(mean((e^2)*(x-mean(x))^2))
+  # Calculating the variance of X manually (different from r built-in estimator)
+  var_x <- mean(x^2) - mean(x)^2
+  # Recording the total number of observations
+  n <- length(x)
+  # Calculating the Standard Error:
+  se_nu/(var_x*sqrt(n))
+}
+
+# Test the function using your solution to Problem 6
+se <- my_simplese(coef, wkly_wage , yrs_educ)
+se
+
+```
+
+
+**d)** 
+
+```{r}
+
+# Define a custom function to compute the test stat and p-value
+my_simpleteststat <- function(beta, se) {
+  # Compute and return the test stat and p-value
+  z <- abs(beta/se)
+  # I calculate the two-sided p-value
+  p_value <- 2*pnorm(z, lower.tail = FALSE)
+  c(z, p_value)
+}
+
+  # Test the function using your solution to Problem 6
+my_simpleteststat(coef[2] - 31, se)
+
+```
+
+**e)** 
+
+```{r}
+
+# Define a custom function to compute and characterize ols estimates
+my_simpleols <- function(y, x) {
+  # Compute and return the the ols estimate, se, Tn, and p-val
+  # Coefficients:
+  coef <- my_simplecoef(y,x)
+  se <- my_simplese(coef, y, x)
+  teststat <- my_simpleteststat(coef[2], se)
+  c(coef[2], se, teststat)
+}
+
+# Test the function using your solution to Problem 6
+my_simpleols(wkly_wage, yrs_educ)
+
+```
+
