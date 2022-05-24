@@ -134,5 +134,9 @@ my_twosidedtest(mu_college , se_college , 0.01 , 600) # Should not reject
 # Check whether the test rejects on 10\% significance level
 my_twosidedtest(mu_college , se_college , 0.10 , 600) # Should reject
 
-
 ```
+
+
+## Github Extra Credit:
+
+The link for the code on my repository: https://github.com/HadyEhab/ECON-21020/blob/e04db9aecb69c58caf9ecc2d2a703084a63f797b/PSet_3.Rmd
