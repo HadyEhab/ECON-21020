@@ -1,0 +1,186 @@
+---
+title: "Problem 6-7"
+author: "Hady Aly"
+date: "5/22/2022"
+output: pdf_document
+---
+
+## Problem 6
+
+```{r, echo=FALSE}
+
+dat <- read.csv("bw06.csv")
+dat <- as.matrix(dat)
+
+y <- dat[, "birthweight"]
+w <- dat[, "cigsdaily"]
+x <- cbind(1, dat[, c("boy", "age", "highschool", "somecollege", "college")])
+
+```
+
+**a)** 
+
+```{r}
+
+# I use the function I defined in the previous PSet:
+my_simplecoef <- function(y, x) {
+  # Compute and return estimates for alpha and beta
+  beta <- (mean(x*y)-mean(x)*mean(y))/(mean(x^2)-mean(x)^2)
+  alpha <- mean(y) - beta * mean(x)
+  c(alpha, beta)
+}
+
+my_simplecoef(y,w)
+
+```
+
+The coefficient to W (= -12.77 gm) represents the *approximate* expected change in the birthweight (grams) *associated* with a unit increase in the cigarettes smoked daily by the mother.
+
+**b)**
+
+```{r}
+
+# Defining a new matrix with W and X included:
+w_x <- cbind(1, dat[, c("cigsdaily", "boy", "age", "highschool", "somecollege", "college")])
+
+# Calculating Beta Coefficients
+w_x_inv <- solve(t(w_x) %*% w_x)
+w_x_y <- t(w_x) %*% y
+beta <- w_x_inv %*% w_x_y
+
+# Reporting the coefficient of W only:
+beta[2]
+
+```
+
+The coefficient to W (= -11.06 gm) represents the *approximate* expected change in birthweight (grams) *associated* with a unit increase in the cigaretters smoked daily by the mother, controlling for the infant's gender, the mother's age and education level.
+
+**c)** 
+
+Yes, it is indeed different because of the additional variables in the regression, which serve as controls.
+
+**d)** 
+
+The interviewer jnterpretted the results as causal (smoking *causes* low infant birth weight), even though the observed relationship is an association between the two variables. In order to establish causuality, we need further assumptions.
+
+**e)**
+
+The common support assumption indicates that for each level of cigarettes smoked daily by the mother, each combination of the possible values of the control vector (gender, age, etc.) is observed. That is, there exists at least one infant: 
+
+- whose mother smoked W number of cigarettes daily, for all W belonging to supp W
+*and*
+- who is attributed with X, for all X belonging to supp X
+
+While the selection-on-observables assumption indicates that conditional on the set of attributes X (infant gender, mother's age and level of education), the number of cigarettes smoked daily by the mother is independent of all the other determinants of infant birth weight.
+
+**f)** 
+
+To try to verify it, I created a for-loop that tests whether we can observe the same number of unique combinations of X (215) for each level of W (25 levels). If the number of combinations after subsetting from the matrix is not equivalent to the overall number of combinations, this means that some combinations were dropped and the common support assumption cannot be verified from the sample.
+
+```{r}
+
+supp_w <- unique(dat[,"cigsdaily"])
+
+for (h in 
+     supp_w) {
+  i <- w_x[,2]==h
+  sub <- w_x[i,]
+  print(nrow(unique(sub))==nrow(unique(x)))
+}
+
+
+```
+
+
+## Problem 7
+
+**a)** 
+
+```{r}
+
+my_coef <- function (y, X) {
+  # Compute and return estimates for beta
+  XX_inv <- solve(t(X) %*% X)
+  XY <- t(X) %*% y
+  beta <- XX_inv %*% XY
+  beta
+}
+
+# Test the function using your solution to Problem 6
+X = cbind(x, "cigsdaily" = w)
+coef <- my_coef(y, X)
+coef
+
+```
+
+**b)** 
+
+```{r}
+
+# Define a custom function to compute the blp estimates
+my_blp <- function(coef, x) {
+  # Compute and return BLP estimates
+  x %*% coef
+}
+
+  # Test the function
+mean(y - my_blp(coef, X)) 
+
+```
+
+**c)** 
+
+```{r}
+
+# Define a custom function to compute the standard error
+
+my_se <- function(coef, y, X) {
+  # Compute and return the standard error
+  n <- nrow(X)
+  epsilon <- c(y - my_blp(coef, X))
+  XX_inv <- solve(t(X) %*% X)
+  XX_eps2 <- t(X * epsilon) %*% (X * epsilon)
+  Sigma <- XX_inv %*% XX_eps2 %*% XX_inv * n
+  sqrt(diag(Sigma)) / sqrt(n)
+}
+
+# Test the function using your solution to Problem 6
+se <- my_se(coef, y, X)
+se
+
+```
+
+**d)** 
+
+```{r}
+
+# Define a custom function to compute the test stat and p-value
+my_teststat <- function (beta, se) {
+  # Compute and return the test stats and p-values
+  stats <- beta/se
+  p_value <- 2*pnorm(abs(stats), lower.tail = FALSE)
+  cbind(stats, p_value)
+}
+
+  # Test the function
+my_teststat(coef, se)
+
+```
+
+**e)** 
+
+```{r}
+
+my_ols <- function(y, X) {
+  # Compute and return the the ols estimate, se, Tn, and p-val
+  beta <- my_coef(y, X)
+  se <- my_se(beta, y, X)
+  stats <- my_teststat(beta, se)
+  cbind("estimates" = beta, se, stats)
+}
+
+  # Test the function using your solution to Problem 6
+my_ols(y, X)
+
+```
+
